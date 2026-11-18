@@ -317,8 +317,7 @@ def build_fdroid_repo(
         output_dir.mkdir(parents=True, exist_ok=True)
         (output_dir / ".nojekyll").write_text("", encoding="utf-8")
 
-        out_fdroid_repo = output_dir / "fdroid" / "repo"
-        out_fdroid_repo.parent.mkdir(parents=True, exist_ok=True)
+        out_fdroid_repo = output_dir / "repo"
         shutil.copytree(repo_dir, out_fdroid_repo)
 
         # Ensure icon_relpath exists in output repo

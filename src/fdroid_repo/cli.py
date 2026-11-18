@@ -23,8 +23,8 @@ def resolve_repo_url(config: Config, explicit_url: str | None) -> str:
     full_repo = os.environ.get("GITHUB_REPOSITORY")
     if owner and full_repo and "/" in full_repo:
         repo_name = full_repo.split("/", 1)[1]
-        return f"https://{owner}.github.io/{repo_name}/fdroid/repo"
-    return "https://hddq.github.io/fdroid-repo/fdroid/repo"
+        return f"https://{owner}.github.io/{repo_name}/repo"
+    return "https://hddq.github.io/fdroid-repo/repo"
 
 
 def _resolve_keystore_bytes(keystore_path: str | None) -> bytes:

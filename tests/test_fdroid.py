@@ -55,3 +55,53 @@ def test_get_keystore_fingerprint_parses_keytool_output(tmp_path: Path) -> None:
         )
         fp = get_keystore_sha256_fingerprint(ks, "pass", "fdroid")
     assert fp == "E6629E27D6CDC87B15F68C43F7D7DF8904AC8EFC76D87C7903976C3A38233AC5"
+
+
+def test_landing_html_uses_repo_subpath() -> None:
+    from fdroid_repo.html_index import render_landing_html
+    from fdroid_repo.models import BuiltAppSummary
+
+    html_out = render_landing_html(
+        repo_name="hddq's repo",
+        repo_description="Desc",
+        repo_url="https://fdroid.hddq.org/repo",
+        fingerprint="AABBCCDD",
+        apps=[
+            BuiltAppSummary(
+                repo="hddq/bluehop",
+                app_id="org.hddq.bluehop",
+                display_name="BlueHop",
+                summary="Summary",
+                stable_tags=("v0.1.0",),
+                beta_tags=(),
+                current_version="0.1.0",
+                current_version_code=1,
+                apk_count=1,
+                icon_relpath="org.hddq.bluehop/en-US/icon.png",
+            )
+        ],
+    )
+    assert 'href="repo/index.html"' in html_out
+    assert 'src="repo/org.hddq.bluehop/en-US/icon.png"' in html_out
+    assert "https://fdroid.hddq.org/repo" in html_out
+
+
+def test_resolve_repo_url_uses_config_and_repo_fallback(monkeypatch) -> None:
+    from fdroid_repo.cli import resolve_repo_url
+    from fdroid_repo.models import AppDefaults, Config, RepoSettings
+
+    cfg_explicit = Config(
+        repo=RepoSettings(name="n", description="d", url="https://fdroid.hddq.org/repo/"),
+        defaults=AppDefaults(),
+        apps=(),
+    )
+    assert resolve_repo_url(cfg_explicit, None) == "https://fdroid.hddq.org/repo"
+
+    cfg_default = Config(
+        repo=RepoSettings(name="n", description="d", url=None),
+        defaults=AppDefaults(),
+        apps=(),
+    )
+    monkeypatch.setenv("GITHUB_REPOSITORY_OWNER", "hddq")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "hddq/fdroid-repo")
+    assert resolve_repo_url(cfg_default, None) == "https://hddq.github.io/fdroid-repo/repo"

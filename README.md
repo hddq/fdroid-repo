@@ -2,8 +2,8 @@
 
 Central multi-app F-Droid repository published on GitHub Pages and automatically built from GitHub Releases.
 
-- **GitHub Pages landing page**: `https://hddq.github.io/fdroid-repo/`
-- **F-Droid repository URL**: `https://hddq.github.io/fdroid-repo/fdroid/repo`
+- **GitHub Pages landing page**: `https://fdroid.hddq.org/`
+- **F-Droid repository URL**: `https://fdroid.hddq.org/repo`
 
 ## How it works
 
@@ -14,16 +14,18 @@ Central multi-app F-Droid repository published on GitHub Pages and automatically
    - Up to `beta_count` (default `1`) newest non-draft pre-releases **only if newer (by SemVer) than the latest stable release**.
 4. APKs matching `include_apk_patterns` (and excluding `exclude_apk_patterns`, such as `*universal*`) are downloaded, inspected with `aapt2`, and paired with Fastlane metadata (`fastlane/metadata/android`) transformed into F-Droid's layout.
 5. `CurrentVersion` and `CurrentVersionCode` are set from the newest stable release's highest `versionCode`, so F-Droid suggests stable updates by default and places newer pre-releases on the `Beta` channel.
-6. `fdroid update --create-metadata` builds and signs the F-Droid index, and the clean output (`.nojekyll`, `index.html`, `repo-manifest.json`, and `fdroid/repo/`) is published to the `gh-pages` branch.
+6. `fdroid update --create-metadata` builds and signs the F-Droid index, and the clean output (`.nojekyll`, `CNAME`, `index.html`, `repo-manifest.json`, and `repo/`) is published to the `gh-pages` branch.
 
 ## Initial GitHub Setup
 
 ### 1. Repository Visibility & GitHub Pages
 
 1. Ensure this repository (`hddq/fdroid-repo`) is **Public** (required for GitHub Pages on standard GitHub accounts and for F-Droid clients to fetch APKs/indexes).
-2. After the first `deploy` workflow run creates the `gh-pages` branch, go to **Settings → Pages**:
+2. Point a `CNAME` DNS record for `fdroid.hddq.org` to `hddq.github.io`.
+3. After the first `deploy` workflow run creates the `gh-pages` branch (including the `CNAME` file), go to **Settings → Pages**:
    - **Source**: `Deploy from a branch`
    - **Branch**: `gh-pages` / `/ (root)`
+   - **Custom domain**: `fdroid.hddq.org` (with **Enforce HTTPS** enabled once DNS propagates)
 
 ### 2. Signing Keystore Secrets
 

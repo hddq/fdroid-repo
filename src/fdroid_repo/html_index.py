@@ -38,7 +38,7 @@ def render_landing_html(
     cards_html: list[str] = []
     for app in apps:
         icon_html = (
-            f'<img class="app-icon" src="fdroid/repo/{html.escape(app.icon_relpath)}" '
+            f'<img class="app-icon" src="repo/{html.escape(app.icon_relpath)}" '
             f'alt="{html.escape(app.display_name)} icon">'
             if app.icon_relpath
             else '<div class="app-icon placeholder">APK</div>'
@@ -214,7 +214,7 @@ def render_landing_html(
       <p class="desc">{escaped_desc}</p>
       <div class="actions">
         {add_btn}
-        <a class="btn" href="fdroid/repo/index.html">Browse F-Droid Index</a>
+        <a class="btn" href="repo/index.html">Browse F-Droid Index</a>
         <button class="btn" type="button"
           onclick="navigator.clipboard.writeText('{escaped_url}')">Copy Repo URL</button>
       </div>
