@@ -1,0 +1,38 @@
+repo:
+  name: "hddq's repo"
+  description: "Central F-Droid repository for hddq's Android apps, automatically updated from GitHub Releases."
+  # Optional explicit repo URL; if omitted, derived in CI from GITHUB_REPOSITORY_OWNER/name:
+  # url: "https://hddq.github.io/fdroid-repo/fdroid/repo"
+
+defaults:
+  # Number of latest stable (non-prerelease) versions to retain per app
+  stable_count: 3
+  # Number of latest beta/prerelease versions to retain per app (only if newer than latest stable)
+  beta_count: 1
+  # APK asset filename globs to include and exclude
+  include_apk_patterns:
+    - "*.apk"
+  exclude_apk_patterns:
+    - "*universal*"
+  # Path to Fastlane metadata inside each app's GitHub repository
+  fastlane_path: "fastlane/metadata/android"
+  # Where to fetch Fastlane metadata from: "latest_release" or "default_branch"
+  metadata_ref: "latest_release"
+  # Regex with a capture group extracting the SemVer string from a git tag
+  tag_regex: '^v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$'
+
+apps:
+  - repo: "hddq/restoid"
+    app_id: "io.github.hddq.restoid"
+    # Optional per-app overrides:
+    # stable_count: 3
+    # beta_count: 1
+    # exclude_apk_patterns: ["*universal*"]
+    metadata:
+      Categories:
+        - System
+      License: GPL-3.0-only
+      AuthorName: hddq
+      SourceCode: https://github.com/hddq/restoid
+      IssueTracker: https://github.com/hddq/restoid/issues
+      Translation: https://crowdin.com/project/restoid

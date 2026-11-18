@@ -1,0 +1,25 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v23
+
+      - name: Enable Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Run pytest and ruff
+        run: |
+          nix develop --command bash -c "pytest -v && ruff check src tests"

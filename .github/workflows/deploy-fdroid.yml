@@ -1,0 +1,110 @@
+name: Deploy F-Droid Repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode: deploy to GitHub Pages, or check-only to inspect latest releases"
+        type: choice
+        default: "deploy"
+        options:
+          - deploy
+          - check-only
+      app_filter:
+        description: "Optional repo or app_id filter (used in check-only mode)"
+        type: string
+        required: false
+        default: ""
+  repository_dispatch:
+    types:
+      - app-released
+      - update-fdroid-repo
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fdroid-repo-deploy
+  cancel-in-progress: false
+
+jobs:
+  fdroid:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log trigger context
+        run: |
+          {
+            echo "### Trigger Context"
+            echo "- **Event**: \`${{ github.event_name }}\`"
+            if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+              echo "- **Dispatch action**: \`${{ github.event.action }}\`"
+              echo "- **Payload repo**: \`${{ github.event.client_payload.repo }}\`"
+              echo "- **Payload tag**: \`${{ github.event.client_payload.tag }}\`"
+            else
+              echo "- **Mode**: \`${{ inputs.mode || 'deploy' }}\`"
+              if [ -n "${{ inputs.app_filter }}" ]; then
+                echo "- **App filter**: \`${{ inputs.app_filter }}\`"
+              fi
+            fi
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v23
+
+      - name: Enable Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v15
+
+      - name: Check latest releases (check-only mode)
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'check-only'
+        env:
+          GH_TOKEN: ${{ secrets.GH_READ_TOKEN || github.token }}
+          APP_FILTER: ${{ inputs.app_filter }}
+        run: |
+          set -euo pipefail
+          args=(--config apps.yml)
+          if [ -n "$APP_FILTER" ]; then
+            args+=(--app "$APP_FILTER")
+          fi
+          nix develop --command python3 -m fdroid_repo.cli check "${args[@]}"
+
+      - name: Validate F-Droid signing secrets
+        if: github.event_name != 'workflow_dispatch' || inputs.mode != 'check-only'
+        env:
+          FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
+          FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
+          FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+          FDROID_REPO_KEY_PASSWORD: ${{ secrets.FDROID_REPO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FDROID_REPO_KEYSTORE_BASE64"
+          test -n "$FDROID_REPO_KEY_ALIAS"
+          test -n "$FDROID_REPO_KEYSTORE_PASSWORD"
+          test -n "$FDROID_REPO_KEY_PASSWORD"
+
+      - name: Build F-Droid repository
+        if: github.event_name != 'workflow_dispatch' || inputs.mode != 'check-only'
+        env:
+          GH_TOKEN: ${{ secrets.GH_READ_TOKEN || github.token }}
+          FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
+          FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
+          FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+          FDROID_REPO_KEY_PASSWORD: ${{ secrets.FDROID_REPO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          nix develop --command python3 -m fdroid_repo.cli build \
+            --config apps.yml \
+            --output dist \
+            --work-dir work
+
+      - name: Publish F-Droid repository to GitHub Pages
+        if: github.event_name != 'workflow_dispatch' || inputs.mode != 'check-only'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist
+          keep_files: false
+          force_orphan: true
