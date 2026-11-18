@@ -12,12 +12,25 @@ def test_load_repo_apps_yml() -> None:
     assert cfg.repo.name == "hddq's repo"
     assert cfg.defaults.stable_count == 3
     assert cfg.defaults.beta_count == 1
-    assert len(cfg.apps) >= 1
-    restoid = cfg.apps[0]
-    assert restoid.repo == "hddq/restoid"
+    assert len(cfg.apps) >= 3
+    by_repo = {app.repo: app for app in cfg.apps}
+    restoid = by_repo["hddq/restoid"]
     assert restoid.app_id == "io.github.hddq.restoid"
     assert restoid.stable_count == 3
     assert restoid.beta_count == 1
+
+    bluehop = by_repo["hddq/bluehop"]
+    assert bluehop.app_id == "org.hddq.bluehop"
+    assert bluehop.metadata["Categories"] == ["Connectivity", "System"]
+    assert bluehop.metadata["Changelog"] == "https://github.com/hddq/bluehop/releases"
+
+    quicklaunch = by_repo["hddq/launcher3-quicklaunch"]
+    assert quicklaunch.app_id == "org.hddq.launcher3.quicklaunch"
+    assert quicklaunch.metadata["Categories"] == ["System"]
+    assert (
+        quicklaunch.metadata["Changelog"]
+        == "https://github.com/hddq/launcher3-quicklaunch/releases"
+    )
 
 
 def test_per_app_overrides(tmp_path: Path) -> None:

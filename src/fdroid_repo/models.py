@@ -19,7 +19,7 @@ class AppDefaults:
     exclude_apk_patterns: tuple[str, ...] = ("*universal*",)
     fastlane_path: str = "fastlane/metadata/android"
     metadata_ref: str = "latest_release"
-    tag_regex: str = r"^v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$"
+    tag_regex: str = r"^v?(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$"
 
 
 @dataclass(frozen=True)

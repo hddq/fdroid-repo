@@ -13,7 +13,7 @@ from fdroid_repo.models import (
 )
 
 _SEMVER_RE = re.compile(
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
+    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?"
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?"
     r"(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
@@ -25,7 +25,7 @@ def parse_semver(version_str: str) -> SemVer | None:
         return None
     major = int(match.group(1))
     minor = int(match.group(2))
-    patch = int(match.group(3))
+    patch = int(match.group(3) or 0)
     pre_raw = match.group(4)
     build = match.group(5) or ""
 

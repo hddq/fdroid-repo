@@ -19,7 +19,7 @@ defaults:
   # Where to fetch Fastlane metadata from: "latest_release" or "default_branch"
   metadata_ref: "latest_release"
   # Regex with a capture group extracting the SemVer string from a git tag
-  tag_regex: '^v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$'
+  tag_regex: '^v?(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$'
 
 apps:
   - repo: "hddq/restoid"
@@ -36,3 +36,26 @@ apps:
       SourceCode: https://github.com/hddq/restoid
       IssueTracker: https://github.com/hddq/restoid/issues
       Translation: https://crowdin.com/project/restoid
+
+  - repo: "hddq/bluehop"
+    app_id: "org.hddq.bluehop"
+    metadata:
+      Categories:
+        - Connectivity
+        - System
+      License: GPL-3.0-only
+      AuthorName: hddq
+      SourceCode: https://github.com/hddq/bluehop
+      IssueTracker: https://github.com/hddq/bluehop/issues
+      Changelog: https://github.com/hddq/bluehop/releases
+
+  - repo: "hddq/launcher3-quicklaunch"
+    app_id: "org.hddq.launcher3.quicklaunch"
+    metadata:
+      Categories:
+        - System
+      License: GPL-3.0-only
+      AuthorName: hddq
+      SourceCode: https://github.com/hddq/launcher3-quicklaunch
+      IssueTracker: https://github.com/hddq/launcher3-quicklaunch/issues
+      Changelog: https://github.com/hddq/launcher3-quicklaunch/releases

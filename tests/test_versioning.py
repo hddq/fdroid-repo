@@ -120,3 +120,27 @@ def test_select_releases_skips_release_without_matching_apks() -> None:
     selected = select_releases(_make_app(stable_count=3, beta_count=1), releases)
     assert [r.tag_name for r in selected.stable] == ["v0.8.1"]
     assert any("v0.8.2" in w for w in selected.warnings)
+
+
+def test_select_releases_supports_two_part_tags() -> None:
+    app = AppConfig(
+        repo="hddq/launcher3-quicklaunch",
+        app_id="org.hddq.launcher3.quicklaunch",
+        enabled=True,
+        stable_count=3,
+        beta_count=1,
+        include_apk_patterns=("*.apk",),
+        exclude_apk_patterns=("*universal*",),
+        fastlane_path="fastlane/metadata/android",
+        metadata_ref="latest_release",
+        tag_regex=r"^v?(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$",
+    )
+    releases = [
+        _gh_release("v1.0", assets=["app-release.apk"]),
+        _gh_release("v1.1", assets=["QuickLaunch-v1.1.apk"]),
+    ]
+    selected = select_releases(app, releases)
+    assert [r.tag_name for r in selected.stable] == ["v1.1", "v1.0"]
+    assert selected.latest_stable is not None
+    assert str(selected.latest_stable.version) == "1.1.0"
+    assert selected.warnings == ()
