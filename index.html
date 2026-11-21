@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>hddq&#x27;s repo</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-fg: #082f49;
+      --stable-bg: #14532d;
+      --stable-fg: #bbf7d0;
+      --beta-bg: #78350f;
+      --beta-fg: #fde68a;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --border: #e2e8f0;
+        --text: #0f172a;
+        --muted: #475569;
+        --accent: #0284c7;
+        --accent-fg: #ffffff;
+        --stable-bg: #dcfce7;
+        --stable-fg: #166534;
+        --beta-bg: #fef3c7;
+        --beta-fg: #92400e;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.25rem; }
+    header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+    }
+    h1 { margin: 0 0 0.5rem; font-size: 1.85rem; }
+    .desc { margin: 0 0 1.25rem; color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .btn {
+      display: inline-block;
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .btn.primary {
+      background: var(--accent); color: var(--accent-fg); border-color: transparent;
+    }
+    .meta-row { margin-top: 0.65rem; font-size: 0.875rem; }
+    .label {
+      display: block; color: var(--muted); font-size: 0.78rem;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      word-break: break-all;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .card-head { display: flex; align-items: center; gap: 0.85rem; }
+    .app-icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      object-fit: cover; flex-shrink: 0;
+    }
+    .app-icon.placeholder {
+      display: flex; align-items: center; justify-content: center;
+      background: var(--border); font-weight: 700; font-size: 0.8rem;
+    }
+    .card h2 { margin: 0; font-size: 1.15rem; }
+    .pkg {
+      margin: 0; color: var(--muted); font-size: 0.8rem;
+      font-family: ui-monospace, monospace;
+    }
+    .summary { margin: 0; font-size: 0.95rem; }
+    .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: var(--border);
+    }
+    .badge.stable { background: var(--stable-bg); color: var(--stable-fg); }
+    .badge.beta { background: var(--beta-bg); color: var(--beta-fg); }
+    .versions { margin: 0; font-size: 0.8rem; color: var(--muted); }
+    .card-footer { margin-top: auto; font-size: 0.85rem; }
+    .card-footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    footer { margin-top: 2rem; color: var(--muted); font-size: 0.8rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>hddq&#x27;s repo</h1>
+      <p class="desc">Central F-Droid repository for hddq&#x27;s Android apps, automatically updated from GitHub Releases.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://fdroid.link/#https://fdroid.hddq.org/repo?fingerprint=A0B4263C095D99C34423F4171D458930CD4167C154A79D38DFC9F6EC0925A595">Add to F-Droid</a>
+        <a class="btn" href="repo/index.html">Browse F-Droid Index</a>
+        <button class="btn" type="button"
+          onclick="navigator.clipboard.writeText('https://fdroid.hddq.org/repo')">Copy Repo URL</button>
+      </div>
+      <div class="meta-row">
+        <span class="label">Repository URL</span>
+        <code>https://fdroid.hddq.org/repo</code>
+      </div>
+      <div class="meta-row"><span class="label">SHA-256 Fingerprint</span><code class="fingerprint">A0B4 263C 095D 99C3 4423 F417 1D45 8930 CD41 67C1 54A7 9D38 DFC9 F6EC 0925 A595</code></div>
+    </header>
+    <section class="grid">
+      
+            <article class="card">
+              <div class="card-head">
+                <img class="app-icon" src="repo/io.github.hddq.restoid/en-US/icon.png" alt="Restoid - Backup Tool icon">
+                <div>
+                  <h2>Restoid - Backup Tool</h2>
+                  <p class="pkg">io.github.hddq.restoid</p>
+                </div>
+              </div>
+              <p class="summary">Secure, deduplicated backup for apps and files powered by the restic engine.</p>
+              <div class="badges"><span class="badge stable">Stable: v0.9.0</span><span class="badge neutral">GPL-3.0-only</span></div>
+              <p class="versions">Retained releases: <code>v0.9.0, v0.8.1, v0.8.0</code></p>
+              <div class="card-footer"><a href="https://github.com/hddq/restoid">Source Code</a></div>
+            </article>
+            
+            <article class="card">
+              <div class="card-head">
+                <img class="app-icon" src="repo/org.hddq.bluehop/en-US/icon.png" alt="BlueHop icon">
+                <div>
+                  <h2>BlueHop</h2>
+                  <p class="pkg">org.hddq.bluehop</p>
+                </div>
+              </div>
+              <p class="summary">Switch non-multipoint Bluetooth devices between your hosts over Wi-Fi</p>
+              <div class="badges"><span class="badge stable">Stable: v0.2.0</span><span class="badge neutral">GPL-3.0-only</span></div>
+              <p class="versions">Retained releases: <code>v0.2.0, v0.1.0</code></p>
+              <div class="card-footer"><a href="https://github.com/hddq/bluehop">Source Code</a></div>
+            </article>
+            
+            <article class="card">
+              <div class="card-head">
+                <div class="app-icon placeholder">APK</div>
+                <div>
+                  <h2>QuickLaunch</h2>
+                  <p class="pkg">org.hddq.launcher3.quicklaunch</p>
+                </div>
+              </div>
+              <p class="summary">Android application hosted in hddq&#x27;s F-Droid repo.</p>
+              <div class="badges"><span class="badge stable">Stable: v1.1</span><span class="badge neutral">GPL-3.0-only</span></div>
+              <p class="versions">Retained releases: <code>v1.1, v1.0</code></p>
+              <div class="card-footer"><a href="https://github.com/hddq/launcher3-quicklaunch">Source Code</a></div>
+            </article>
+            
+    </section>
+    <footer>
+      Last updated: 2026-11-21 14:09 UTC
+    </footer>
+  </main>
+</body>
+</html>
