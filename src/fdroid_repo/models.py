@@ -9,6 +9,7 @@ class RepoSettings:
     name: str
     description: str
     url: str | None = None
+    icon: str | None = None
 
 
 @dataclass(frozen=True)

@@ -45,7 +45,11 @@ def load_config(path: str | Path) -> Config:
     ).strip()
     repo_url_raw = repo_raw.get("url")
     repo_url = str(repo_url_raw).strip().rstrip("/") if repo_url_raw else None
-    repo_settings = RepoSettings(name=repo_name, description=repo_desc, url=repo_url)
+    repo_icon_raw = repo_raw.get("icon")
+    repo_icon = str(repo_icon_raw).strip() if repo_icon_raw else None
+    repo_settings = RepoSettings(
+        name=repo_name, description=repo_desc, url=repo_url, icon=repo_icon
+    )
 
     defaults_raw = raw.get("defaults") or {}
     if not isinstance(defaults_raw, dict):

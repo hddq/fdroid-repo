@@ -19,6 +19,7 @@
       devShells = forAllSystems (pkgs:
         let
           pythonEnv = pkgs.python3.withPackages (ps: [
+            ps.pillow
             ps.pyyaml
             ps.requests
             ps.pytest
@@ -64,6 +65,7 @@
             ];
 
             propagatedBuildInputs = [
+              pkgs.python3Packages.pillow
               pkgs.python3Packages.pyyaml
               pkgs.python3Packages.requests
             ];

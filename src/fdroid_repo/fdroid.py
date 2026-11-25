@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
@@ -10,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from PIL import Image
 
 from fdroid_repo.fastlane import extract_fastlane_summary, transform_fastlane_to_fdroid
 from fdroid_repo.github_client import GitHubClient
@@ -27,10 +29,34 @@ _PACKAGE_RE = re.compile(
 )
 _LABEL_RE = re.compile(r"^application-label(?:-en[^:]*)?:'([^']*)'")
 _SHA256_RE = re.compile(r"SHA256:\s*([0-9A-Fa-f:]+)")
+_PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 class FDroidBuildError(RuntimeError):
     """Raised when building or inspecting the F-Droid repo fails."""
+
+
+def _prepare_repo_icon(icon_source: str, client: GitHubClient, dest_path: Path) -> None:
+    if icon_source.startswith(("http://", "https://")):
+        raw_bytes = client.download_url_bytes(icon_source)
+    else:
+        src_path = Path(icon_source)
+        if not src_path.is_file():
+            raise FDroidBuildError(f"Repository icon file not found: {src_path}")
+        raw_bytes = src_path.read_bytes()
+
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    if raw_bytes.startswith(_PNG_SIGNATURE):
+        dest_path.write_bytes(raw_bytes)
+        return
+
+    try:
+        with Image.open(io.BytesIO(raw_bytes)) as img:
+            img.save(dest_path, format="PNG")
+    except Exception as exc:
+        raise FDroidBuildError(
+            f"Failed to convert repository icon '{icon_source}' to PNG: {exc}"
+        ) from exc
 
 
 def inspect_apk(apk_path: Path, aapt2_bin: str = "aapt2") -> ApkInfo:
@@ -257,7 +283,12 @@ def build_fdroid_repo(
             keytool_bin=keytool_bin,
         )
 
-        fdroid_config = {
+        repo_icon_name: str | None = None
+        if config.repo.icon:
+            repo_icon_name = "icon.png"
+            _prepare_repo_icon(config.repo.icon, client, repo_dir / "icons" / repo_icon_name)
+
+        fdroid_config: dict[str, Any] = {
             "repo_url": repo_url,
             "repo_name": config.repo.name,
             "repo_description": config.repo.description,
@@ -267,6 +298,8 @@ def build_fdroid_repo(
             "repo_keyalias": key_alias,
             "archive_older": 0,
         }
+        if repo_icon_name:
+            fdroid_config["repo_icon"] = repo_icon_name
         config_yml_path.write_text(
             yaml.safe_dump(fdroid_config, sort_keys=False, allow_unicode=True),
             encoding="utf-8",
@@ -431,12 +464,17 @@ def build_fdroid_repo(
                 )
             )
 
+        repo_icon_relpath: str | None = None
+        if repo_icon_name and (out_fdroid_repo / "icons" / repo_icon_name).is_file():
+            repo_icon_relpath = f"icons/{repo_icon_name}"
+
         landing_html = render_landing_html(
             repo_name=config.repo.name,
             repo_description=config.repo.description,
             repo_url=repo_url,
             fingerprint=fingerprint,
             apps=verified_summaries,
+            repo_icon_relpath=repo_icon_relpath,
         )
         (output_dir / "index.html").write_text(landing_html, encoding="utf-8")
         (output_dir / "404.html").write_text(
