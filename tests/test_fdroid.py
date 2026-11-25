@@ -22,6 +22,9 @@ def test_render_cloudflare_worker() -> None:
     )
     assert '"a.apk": "https://github.com/hddq/a/releases/download/v2.0.0/a.apk"' in worker_js
     assert '"b.apk": "https://github.com/hddq/b/releases/download/v1.0.0/b.apk"' in worker_js
+    assert 'decodeURIComponent(rawFilename)' in worker_js
+    assert 'request.headers.get("If-Range")' in worker_js
+    assert "upstream.status === 416" in worker_js
     assert 'redirect: "follow"' in worker_js
     assert "env.ASSETS.fetch(request)" in worker_js
 

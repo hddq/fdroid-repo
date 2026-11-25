@@ -134,17 +134,32 @@ def _render_cloudflare_worker(apk_urls: dict[str, str]) -> str:
         "  async fetch(request, env) {\n"
         "    const url = new URL(request.url);\n"
         '    if (url.pathname.startsWith("/repo/")) {\n'
-        '      const filename = url.pathname.slice("/repo/".length);\n'
-        "      const upstreamUrl = APK_URLS[filename];\n"
+        '      const rawFilename = url.pathname.slice("/repo/".length);\n'
+        "      let upstreamUrl = APK_URLS[rawFilename];\n"
+        "      if (!upstreamUrl) {\n"
+        "        try {\n"
+        "          upstreamUrl = APK_URLS[decodeURIComponent(rawFilename)];\n"
+        "        } catch {\n"
+        "          upstreamUrl = undefined;\n"
+        "        }\n"
+        "      }\n"
         "      if (upstreamUrl) {\n"
         "        const upstreamHeaders = new Headers();\n"
         '        const range = request.headers.get("Range");\n'
         '        if (range) upstreamHeaders.set("Range", range);\n'
+        '        const ifRange = request.headers.get("If-Range");\n'
+        '        if (ifRange) upstreamHeaders.set("If-Range", ifRange);\n'
         "        const upstream = await fetch(upstreamUrl, {\n"
         '          method: request.method === "HEAD" ? "HEAD" : "GET",\n'
         "          headers: upstreamHeaders,\n"
         '          redirect: "follow",\n'
         "        });\n"
+        "        if (upstream.status === 416) {\n"
+        "          const headers = new Headers();\n"
+        '          const contentRange = upstream.headers.get("Content-Range");\n'
+        '          if (contentRange) headers.set("Content-Range", contentRange);\n'
+        "          return new Response(null, { status: 416, headers });\n"
+        "        }\n"
         "        if (!upstream.ok && upstream.status !== 206) {\n"
         "          return new Response(`Upstream error: ${upstream.status}`, { status: 502 });\n"
         "        }\n"
