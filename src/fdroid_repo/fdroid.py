@@ -126,6 +126,14 @@ def _apk_repo_filename(app_id: str, asset_name: str, tag_name: str) -> str:
     return f"{app_id}-{stem}-{tag_name}.apk"
 
 
+def _format_cloudflare_redirects(apk_redirects: dict[str, str]) -> str:
+    lines = [
+        f"/repo/{repo_apk_name} {download_url} 302"
+        for repo_apk_name, download_url in sorted(apk_redirects.items())
+    ]
+    return ("\n".join(lines) + "\n") if lines else ""
+
+
 def _resolve_metadata_ref(
     app: AppConfig,
     selected: SelectedReleases,
@@ -168,6 +176,7 @@ def build_fdroid_repo(
     config_yml_path = fdroid_dir / "config.yml"
 
     summaries: list[BuiltAppSummary] = []
+    apk_redirects: dict[str, str] = {}
 
     try:
         keystore_path.write_bytes(keystore_bytes)
@@ -211,7 +220,7 @@ def build_fdroid_repo(
 
             # 1. Download APKs and inspect them with aapt2
             release_apk_infos: dict[str, list[ApkInfo]] = {}
-            downloaded_files: list[tuple[str, Path, ApkInfo]] = []
+            downloaded_files: list[tuple[str, Path, ApkInfo, str]] = []
             detected_app_id: str | None = app.app_id
             detected_label = ""
 
@@ -231,15 +240,16 @@ def build_fdroid_repo(
                     if not detected_label and info.label:
                         detected_label = info.label
                     infos.append(info)
-                    downloaded_files.append((rel.tag_name, tmp_apk, info))
+                    downloaded_files.append((rel.tag_name, tmp_apk, info, asset.download_url))
                 release_apk_infos[rel.tag_name] = infos
 
             assert detected_app_id is not None
             app_id = detected_app_id
 
-            for tag_name, tmp_apk, _info in downloaded_files:
+            for tag_name, tmp_apk, _info, download_url in downloaded_files:
                 repo_apk_name = _apk_repo_filename(app_id, tmp_apk.name, tag_name)
                 shutil.move(str(tmp_apk), str(repo_dir / repo_apk_name))
+                apk_redirects[repo_apk_name] = download_url
 
             # 2. Fetch and transform Fastlane metadata
             app_meta_dir = metadata_dir / app_id
@@ -311,14 +321,18 @@ def build_fdroid_repo(
         except subprocess.CalledProcessError as exc:
             raise FDroidBuildError(f"fdroid update failed with exit code {exc.returncode}") from exc
 
-        # 5. Prepare clean publish directory (NO keystore, NO config.yml!)
+        # 5. Prepare clean publish directory (NO keystore, NO config.yml, NO .apk binaries!)
         if output_dir.exists():
             shutil.rmtree(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        (output_dir / ".nojekyll").write_text("", encoding="utf-8")
 
         out_fdroid_repo = output_dir / "repo"
-        shutil.copytree(repo_dir, out_fdroid_repo)
+        shutil.copytree(repo_dir, out_fdroid_repo, ignore=shutil.ignore_patterns("*.apk"))
+
+        (output_dir / "_redirects").write_text(
+            _format_cloudflare_redirects(apk_redirects),
+            encoding="utf-8",
+        )
 
         # Ensure icon_relpath exists in output repo
         verified_summaries: list[BuiltAppSummary] = []

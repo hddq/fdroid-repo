@@ -1,8 +1,8 @@
 # hddq's repo
 
-Central multi-app F-Droid repository published on GitHub Pages and automatically built from GitHub Releases.
+Central multi-app F-Droid repository published on Cloudflare Pages and automatically built from GitHub Releases.
 
-- **GitHub Pages landing page**: `https://fdroid.hddq.org/`
+- **Landing page**: `https://fdroid.hddq.org/`
 - **F-Droid repository URL**: `https://fdroid.hddq.org/repo`
 
 ## How it works
@@ -14,20 +14,16 @@ Central multi-app F-Droid repository published on GitHub Pages and automatically
    - Up to `beta_count` (default `1`) newest non-draft pre-releases **only if newer (by SemVer) than the latest stable release**.
 4. APKs matching `include_apk_patterns` (and excluding `exclude_apk_patterns`, such as `*universal*`) are downloaded, inspected with `aapt2`, and paired with Fastlane metadata (`fastlane/metadata/android`) transformed into F-Droid's layout.
 5. `CurrentVersion` and `CurrentVersionCode` are set from the newest stable release's highest `versionCode`, so F-Droid suggests stable updates by default and places newer pre-releases on the `Beta` channel.
-6. `fdroid update --create-metadata` builds and signs the F-Droid index, and the clean output (`.nojekyll`, `CNAME`, `index.html`, `repo-manifest.json`, and `repo/`) is published to the `gh-pages` branch.
+6. `fdroid update --create-metadata` builds and signs the F-Droid index. The publish directory (`_redirects`, `index.html`, `repo-manifest.json`, and `repo/` **without** `.apk` binaries) is deployed to Cloudflare Pages. Requests for `/repo/*.apk` are answered with HTTP `302` redirects to the corresponding GitHub Releases assets so GitHub tracks download stats natively.
 
-## Initial GitHub Setup
+## Initial Setup
 
-### 1. Repository Visibility & GitHub Pages
+### 1. Cloudflare Pages
 
-1. Ensure this repository (`hddq/fdroid-repo`) is **Public** (required for GitHub Pages on standard GitHub accounts and for F-Droid clients to fetch APKs/indexes).
-2. Point a `CNAME` DNS record for `fdroid.hddq.org` to `hddq.github.io`.
-3. After the first `deploy` workflow run creates the `gh-pages` branch (including the `CNAME` file), go to **Settings → Pages**:
-   - **Source**: `Deploy from a branch`
-   - **Branch**: `gh-pages` / `/ (root)`
-   - **Custom domain**: `fdroid.hddq.org` (with **Enforce HTTPS** enabled once DNS propagates)
+1. Create a Cloudflare Pages project named `fdroid-repo` (production branch `main`) and attach the custom domain `fdroid.hddq.org`.
+2. Point a proxied `CNAME` DNS record for `fdroid.hddq.org` to `fdroid-repo.pages.dev`.
 
-### 2. Signing Keystore Secrets
+### 2. Repository Secrets
 
 Add the following **Repository secrets** under **Settings → Secrets and variables → Actions**:
 
@@ -37,6 +33,8 @@ Add the following **Repository secrets** under **Settings → Secrets and variab
 | `FDROID_REPO_KEY_ALIAS` | Key alias inside the keystore (e.g. `fdroid`) |
 | `FDROID_REPO_KEYSTORE_PASSWORD` | Keystore password |
 | `FDROID_REPO_KEY_PASSWORD` | Key password |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with **Cloudflare Pages: Edit** permission |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID |
 
 > **Tip:** You can reuse the exact same F-Droid keystore secrets already used in `hddq/restoid`, or generate a fresh JKS keystore with:
 >

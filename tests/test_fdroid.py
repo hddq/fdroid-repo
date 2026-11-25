@@ -4,7 +4,120 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-from fdroid_repo.fdroid import _apk_repo_filename, get_keystore_sha256_fingerprint, inspect_apk
+from fdroid_repo.fdroid import (
+    _apk_repo_filename,
+    _format_cloudflare_redirects,
+    build_fdroid_repo,
+    get_keystore_sha256_fingerprint,
+    inspect_apk,
+)
+
+
+def test_format_cloudflare_redirects() -> None:
+    redirects = _format_cloudflare_redirects(
+        {
+            "b.apk": "https://github.com/hddq/b/releases/download/v1.0.0/b.apk",
+            "a.apk": "https://github.com/hddq/a/releases/download/v2.0.0/a.apk",
+        }
+    )
+    assert redirects == (
+        "/repo/a.apk https://github.com/hddq/a/releases/download/v2.0.0/a.apk 302\n"
+        "/repo/b.apk https://github.com/hddq/b/releases/download/v1.0.0/b.apk 302\n"
+    )
+    assert _format_cloudflare_redirects({}) == ""
+
+
+def test_build_fdroid_repo_excludes_apks_and_writes_redirects(tmp_path: Path) -> None:
+    from unittest.mock import MagicMock
+
+    from fdroid_repo.models import (
+        ApkInfo,
+        AppConfig,
+        AppDefaults,
+        Config,
+        ParsedRelease,
+        ReleaseAsset,
+        RepoSettings,
+        SelectedReleases,
+        SemVer,
+    )
+
+    app = AppConfig(
+        repo="hddq/bluehop",
+        app_id="org.hddq.bluehop",
+        enabled=True,
+        stable_count=3,
+        beta_count=1,
+        include_apk_patterns=("*.apk",),
+        exclude_apk_patterns=(),
+        fastlane_path="",
+        metadata_ref="latest_release",
+        tag_regex=AppDefaults.tag_regex,
+    )
+    asset = ReleaseAsset(
+        name="bluehop-arm64.apk",
+        download_url="https://github.com/hddq/bluehop/releases/download/v0.1.0/bluehop-arm64.apk",
+    )
+    rel = ParsedRelease(
+        tag_name="v0.1.0",
+        version=SemVer(0, 1, 0),
+        is_prerelease=False,
+        published_at="2026-01-01T00:00:00Z",
+        html_url="https://github.com/hddq/bluehop/releases/tag/v0.1.0",
+        apk_assets=(asset,),
+    )
+    sel = SelectedReleases(app=app, stable=(rel,), betas=(), latest_stable=rel)
+    cfg = Config(
+        repo=RepoSettings(name="hddq's repo", description="Desc", url="https://fdroid.hddq.org/repo"),
+        defaults=AppDefaults(),
+        apps=(app,),
+    )
+
+    client = MagicMock()
+    client.download_asset.side_effect = lambda _a, dest: (
+        dest.parent.mkdir(parents=True, exist_ok=True),
+        dest.write_bytes(b"fake-apk"),
+    )
+
+    def fake_fdroid_run(cmd: list[str], cwd: Path, check: bool) -> subprocess.CompletedProcess:
+        assert cmd == ["fdroid", "update", "--create-metadata"]
+        (cwd / "repo" / "index-v2.json").write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    with (
+        patch("fdroid_repo.fdroid.get_keystore_sha256_fingerprint", return_value="AABBCC"),
+        patch(
+            "fdroid_repo.fdroid.inspect_apk",
+            return_value=ApkInfo(
+                package_name="org.hddq.bluehop",
+                version_code=1,
+                version_name="0.1.0",
+                label="BlueHop",
+            ),
+        ),
+        patch("subprocess.run", side_effect=fake_fdroid_run),
+    ):
+        output_dir = tmp_path / "dist"
+        build_fdroid_repo(
+            config=cfg,
+            selections=[sel],
+            client=client,
+            work_dir=tmp_path / "work",
+            output_dir=output_dir,
+            repo_url="https://fdroid.hddq.org/repo",
+            keystore_bytes=b"ks",
+            keystore_pass="kspass",
+            key_alias="fdroid",
+            key_pass="kpass",
+        )
+
+    assert (output_dir / "repo" / "index-v2.json").is_file()
+    assert list((output_dir / "repo").glob("*.apk")) == []
+    assert not (output_dir / ".nojekyll").exists()
+    assert (output_dir / "_redirects").read_text(encoding="utf-8") == (
+        "/repo/org.hddq.bluehop-bluehop-arm64-v0.1.0.apk "
+        "https://github.com/hddq/bluehop/releases/download/v0.1.0/bluehop-arm64.apk 302\n"
+    )
 
 
 def test_apk_repo_filename() -> None:
