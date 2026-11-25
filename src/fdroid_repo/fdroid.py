@@ -13,7 +13,7 @@ import yaml
 
 from fdroid_repo.fastlane import extract_fastlane_summary, transform_fastlane_to_fdroid
 from fdroid_repo.github_client import GitHubClient
-from fdroid_repo.html_index import render_landing_html
+from fdroid_repo.html_index import render_landing_html, render_not_found_html
 from fdroid_repo.models import (
     ApkInfo,
     AppConfig,
@@ -439,6 +439,10 @@ def build_fdroid_repo(
             apps=verified_summaries,
         )
         (output_dir / "index.html").write_text(landing_html, encoding="utf-8")
+        (output_dir / "404.html").write_text(
+            render_not_found_html(config.repo.name),
+            encoding="utf-8",
+        )
 
         manifest = {
             "repo_name": config.repo.name,

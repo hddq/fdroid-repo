@@ -7,6 +7,21 @@ from urllib.parse import quote
 from fdroid_repo.models import BuiltAppSummary
 
 
+def render_not_found_html(repo_name: str) -> str:
+    escaped_name = html.escape(repo_name)
+    return (
+        "<!DOCTYPE html>\n"
+        '<html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<meta name="color-scheme" content="light dark">'
+        '<meta name="robots" content="noindex">'
+        f"<title>404 Not Found — {escaped_name}</title></head>"
+        "<body><main><h1>404 Not Found</h1>"
+        f"<p>The requested path does not exist on {escaped_name}.</p>"
+        '<p><a href="/">Back to home</a></p></main></body></html>\n'
+    )
+
+
 def render_landing_html(
     repo_name: str,
     repo_description: str,

@@ -14,7 +14,7 @@ Central multi-app F-Droid repository published on Cloudflare Pages and automatic
    - Up to `beta_count` (default `1`) newest non-draft pre-releases **only if newer (by SemVer) than the latest stable release**.
 4. APKs matching `include_apk_patterns` (and excluding `exclude_apk_patterns`, such as `*universal*`) are downloaded, inspected with `aapt2`, and paired with Fastlane metadata (`fastlane/metadata/android`) transformed into F-Droid's layout.
 5. `CurrentVersion` and `CurrentVersionCode` are set from the newest stable release's highest `versionCode`, so F-Droid suggests stable updates by default and places newer pre-releases on the `Beta` channel.
-6. `fdroid update --create-metadata` builds and signs the F-Droid index. The publish directory (`_worker.js`, `index.html`, `repo-manifest.json`, and `repo/` **without** `.apk` binaries) is deployed to Cloudflare Pages. Requests for `/repo/*.apk` are streamed by `_worker.js` directly from the corresponding GitHub Releases assets as `200 OK` (with `Range`/`HEAD` support) so F-Droid clients never see a redirect while GitHub tracks download stats natively.
+6. `fdroid update --create-metadata` builds and signs the F-Droid index. The publish directory (`_worker.js`, `index.html`, `404.html`, `repo-manifest.json`, and `repo/` **without** `.apk` binaries) is deployed to Cloudflare Pages. Requests for `/repo/*.apk` are streamed by `_worker.js` directly from the corresponding GitHub Releases assets as `200 OK` (with `Range`/`HEAD` support) so F-Droid clients never see a redirect while GitHub tracks download stats natively.
 
 ## Initial Setup
 

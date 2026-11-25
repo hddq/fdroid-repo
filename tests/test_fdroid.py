@@ -120,6 +120,9 @@ def test_build_fdroid_repo_excludes_apks_and_writes_redirects(tmp_path: Path) ->
     assert list((output_dir / "repo").glob("*.apk")) == []
     assert not (output_dir / ".nojekyll").exists()
     assert not (output_dir / "_redirects").exists()
+    not_found_html = (output_dir / "404.html").read_text(encoding="utf-8")
+    assert "404 Not Found" in not_found_html
+    assert 'href="/"' in not_found_html
     worker_js = (output_dir / "_worker.js").read_text(encoding="utf-8")
     assert (
         '"org.hddq.bluehop-bluehop-arm64-v0.1.0.apk": '
