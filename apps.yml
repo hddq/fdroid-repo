@@ -3,6 +3,8 @@ repo:
   description: "Central F-Droid repository for hddq's Android apps, automatically updated from GitHub Releases."
   # Explicit repo URL; if omitted, derived in CI from GITHUB_REPOSITORY_OWNER/name
   url: "https://fdroid.hddq.org/repo"
+  # Repository avatar URL or local path (converted to PNG if needed)
+  icon: "https://github.com/hddq.png"
 
 defaults:
   # Number of latest stable (non-prerelease) versions to retain per app

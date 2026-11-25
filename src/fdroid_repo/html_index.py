@@ -28,10 +28,22 @@ def render_landing_html(
     repo_url: str,
     fingerprint: str | None,
     apps: list[BuiltAppSummary],
+    repo_icon_relpath: str | None = None,
 ) -> str:
     escaped_name = html.escape(repo_name)
     escaped_desc = html.escape(repo_description)
     escaped_url = html.escape(repo_url)
+
+    if repo_icon_relpath:
+        escaped_repo_icon = html.escape(repo_icon_relpath)
+        favicon_tag = f'\n  <link rel="icon" type="image/png" href="repo/{escaped_repo_icon}">'
+        repo_icon_html = (
+            f'<img class="repo-icon" src="repo/{escaped_repo_icon}" '
+            f'alt="{escaped_name} icon">'
+        )
+    else:
+        favicon_tag = ""
+        repo_icon_html = ""
 
     if fingerprint:
         fdroid_link = f"https://fdroid.link/#{quote(repo_url, safe=':/')}?fingerprint={fingerprint}"
@@ -103,7 +115,7 @@ def render_landing_html(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{escaped_name}</title>
+  <title>{escaped_name}</title>{favicon_tag}
   <style>
     :root {{
       color-scheme: light dark;
@@ -150,8 +162,21 @@ def render_landing_html(
       padding: 1.75rem;
       margin-bottom: 2rem;
     }}
-    h1 {{ margin: 0 0 0.5rem; font-size: 1.85rem; }}
-    .desc {{ margin: 0 0 1.25rem; color: var(--muted); }}
+    .repo-head {{
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }}
+    .repo-icon {{
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }}
+    h1 {{ margin: 0 0 0.35rem; font-size: 1.85rem; }}
+    .desc {{ margin: 0; color: var(--muted); }}
     .actions {{ display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }}
     .btn {{
       display: inline-block;
@@ -225,8 +250,13 @@ def render_landing_html(
 <body>
   <main class="container">
     <header>
-      <h1>{escaped_name}</h1>
-      <p class="desc">{escaped_desc}</p>
+      <div class="repo-head">
+        {repo_icon_html}
+        <div>
+          <h1>{escaped_name}</h1>
+          <p class="desc">{escaped_desc}</p>
+        </div>
+      </div>
       <div class="actions">
         {add_btn}
         <a class="btn" href="repo/index.html">Browse F-Droid Index</a>

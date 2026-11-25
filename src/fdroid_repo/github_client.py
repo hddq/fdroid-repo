@@ -63,6 +63,16 @@ class GitHubClient:
                 break
         return releases
 
+    def download_url_bytes(self, url: str) -> bytes:
+        resp = requests.get(
+            url,
+            headers={"User-Agent": str(self.session.headers.get("User-Agent", ""))},
+            timeout=30,
+        )
+        if resp.status_code >= 400:
+            raise GitHubClientError(f"Failed to download {url} ({resp.status_code})")
+        return resp.content
+
     def download_asset(self, asset: ReleaseAsset, dest_path: Path) -> Path:
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         with self.session.get(asset.download_url, stream=True, timeout=120) as resp:

@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from fdroid_repo.fdroid import (
     _apk_repo_filename,
+    _prepare_repo_icon,
     _render_cloudflare_worker,
     build_fdroid_repo,
     get_keystore_sha256_fingerprint,
@@ -203,10 +204,181 @@ def test_landing_html_uses_repo_subpath() -> None:
                 icon_relpath="org.hddq.bluehop/en-US/icon.png",
             )
         ],
+        repo_icon_relpath="icons/icon.png",
     )
     assert 'href="repo/index.html"' in html_out
     assert 'src="repo/org.hddq.bluehop/en-US/icon.png"' in html_out
+    assert 'rel="icon" type="image/png" href="repo/icons/icon.png"' in html_out
+    assert 'class="repo-icon" src="repo/icons/icon.png"' in html_out
     assert "https://fdroid.hddq.org/repo" in html_out
+
+
+def test_prepare_repo_icon_converts_jpeg_to_png(tmp_path: Path) -> None:
+    import io
+    from unittest.mock import MagicMock
+
+    from PIL import Image
+
+    jpeg_buf = io.BytesIO()
+    Image.new("RGB", (32, 32), color=(255, 0, 0)).save(jpeg_buf, format="JPEG")
+
+    client = MagicMock()
+    client.download_url_bytes.return_value = jpeg_buf.getvalue()
+
+    dest = tmp_path / "repo" / "icons" / "icon.png"
+    _prepare_repo_icon("https://github.com/hddq.png", client, dest)
+
+    assert dest.is_file()
+    raw = dest.read_bytes()
+    assert raw.startswith(b"\x89PNG\r\n\x1a\n")
+    with Image.open(dest) as img:
+        assert img.format == "PNG"
+        assert img.size == (32, 32)
+
+
+def test_prepare_repo_icon_converts_cmyk_jpeg_to_png(tmp_path: Path) -> None:
+    import io
+    from unittest.mock import MagicMock
+
+    from PIL import Image
+
+    cmyk_buf = io.BytesIO()
+    Image.new("CMYK", (32, 32), color=(0, 255, 255, 0)).save(cmyk_buf, format="JPEG")
+
+    client = MagicMock()
+    client.download_url_bytes.return_value = cmyk_buf.getvalue()
+
+    dest = tmp_path / "repo" / "icons" / "icon.png"
+    _prepare_repo_icon("https://example.com/avatar.jpg", client, dest)
+
+    assert dest.is_file()
+    with Image.open(dest) as img:
+        assert img.format == "PNG"
+        assert img.mode == "RGB"
+        assert img.size == (32, 32)
+
+
+def test_download_url_bytes_omits_authorization_header() -> None:
+    from unittest.mock import MagicMock
+
+    from fdroid_repo.github_client import GitHubClient
+
+    client = GitHubClient(token="secret-token")
+    fake_resp = MagicMock(status_code=200, content=b"img-bytes")
+    with patch("fdroid_repo.github_client.requests.get", return_value=fake_resp) as mock_get:
+        data = client.download_url_bytes("https://example.com/icon.png")
+
+    assert data == b"img-bytes"
+    mock_get.assert_called_once()
+    headers = mock_get.call_args.kwargs["headers"]
+    assert "Authorization" not in headers
+
+
+def test_build_fdroid_repo_fetches_repo_icon_and_renders_landing(tmp_path: Path) -> None:
+    import io
+    from unittest.mock import MagicMock
+
+    import yaml
+    from PIL import Image
+
+    from fdroid_repo.models import (
+        ApkInfo,
+        AppConfig,
+        AppDefaults,
+        Config,
+        ParsedRelease,
+        ReleaseAsset,
+        RepoSettings,
+        SelectedReleases,
+        SemVer,
+    )
+
+    jpeg_buf = io.BytesIO()
+    Image.new("RGB", (64, 64), color=(0, 128, 255)).save(jpeg_buf, format="JPEG")
+
+    app = AppConfig(
+        repo="hddq/bluehop",
+        app_id="org.hddq.bluehop",
+        enabled=True,
+        stable_count=3,
+        beta_count=1,
+        include_apk_patterns=("*.apk",),
+        exclude_apk_patterns=(),
+        fastlane_path="",
+        metadata_ref="latest_release",
+        tag_regex=AppDefaults.tag_regex,
+    )
+    asset = ReleaseAsset(
+        name="bluehop-arm64.apk",
+        download_url="https://github.com/hddq/bluehop/releases/download/v0.1.0/bluehop-arm64.apk",
+    )
+    rel = ParsedRelease(
+        tag_name="v0.1.0",
+        version=SemVer(0, 1, 0),
+        is_prerelease=False,
+        published_at="2026-01-01T00:00:00Z",
+        html_url="https://github.com/hddq/bluehop/releases/tag/v0.1.0",
+        apk_assets=(asset,),
+    )
+    sel = SelectedReleases(app=app, stable=(rel,), betas=(), latest_stable=rel)
+    cfg = Config(
+        repo=RepoSettings(
+            name="hddq's repo",
+            description="Desc",
+            url="https://fdroid.hddq.org/repo",
+            icon="https://github.com/hddq.png",
+        ),
+        defaults=AppDefaults(),
+        apps=(app,),
+    )
+
+    client = MagicMock()
+    client.download_url_bytes.return_value = jpeg_buf.getvalue()
+    client.download_asset.side_effect = lambda _a, dest: (
+        dest.parent.mkdir(parents=True, exist_ok=True),
+        dest.write_bytes(b"fake-apk"),
+    )
+
+    def fake_fdroid_run(cmd: list[str], cwd: Path, check: bool) -> subprocess.CompletedProcess:
+        fdroid_cfg = yaml.safe_load((cwd / "config.yml").read_text(encoding="utf-8"))
+        assert fdroid_cfg["repo_icon"] == "icon.png"
+        icon_file = cwd / "repo" / "icons" / "icon.png"
+        assert icon_file.is_file()
+        assert icon_file.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+        (cwd / "repo" / "index-v2.json").write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(args=cmd, returncode=0)
+
+    with (
+        patch("fdroid_repo.fdroid.get_keystore_sha256_fingerprint", return_value="AABBCC"),
+        patch(
+            "fdroid_repo.fdroid.inspect_apk",
+            return_value=ApkInfo(
+                package_name="org.hddq.bluehop",
+                version_code=1,
+                version_name="0.1.0",
+                label="BlueHop",
+            ),
+        ),
+        patch("subprocess.run", side_effect=fake_fdroid_run),
+    ):
+        output_dir = tmp_path / "dist"
+        build_fdroid_repo(
+            config=cfg,
+            selections=[sel],
+            client=client,
+            work_dir=tmp_path / "work",
+            output_dir=output_dir,
+            repo_url="https://fdroid.hddq.org/repo",
+            keystore_bytes=b"ks",
+            keystore_pass="kspass",
+            key_alias="fdroid",
+            key_pass="kpass",
+        )
+
+    assert (output_dir / "repo" / "icons" / "icon.png").is_file()
+    landing = (output_dir / "index.html").read_text(encoding="utf-8")
+    assert 'href="repo/icons/icon.png"' in landing
+    assert 'src="repo/icons/icon.png"' in landing
 
 
 def test_resolve_repo_url_uses_config_and_repo_fallback(monkeypatch) -> None:
