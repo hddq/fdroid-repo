@@ -126,12 +126,51 @@ def _apk_repo_filename(app_id: str, asset_name: str, tag_name: str) -> str:
     return f"{app_id}-{stem}-{tag_name}.apk"
 
 
-def _format_cloudflare_redirects(apk_redirects: dict[str, str]) -> str:
-    lines = [
-        f"/repo/{repo_apk_name} {download_url} 302"
-        for repo_apk_name, download_url in sorted(apk_redirects.items())
-    ]
-    return ("\n".join(lines) + "\n") if lines else ""
+def _render_cloudflare_worker(apk_urls: dict[str, str]) -> str:
+    mapping_json = json.dumps(dict(sorted(apk_urls.items())), indent=2)
+    return (
+        f"const APK_URLS = {mapping_json};\n\n"
+        "export default {\n"
+        "  async fetch(request, env) {\n"
+        "    const url = new URL(request.url);\n"
+        '    if (url.pathname.startsWith("/repo/")) {\n'
+        '      const filename = url.pathname.slice("/repo/".length);\n'
+        "      const upstreamUrl = APK_URLS[filename];\n"
+        "      if (upstreamUrl) {\n"
+        "        const upstreamHeaders = new Headers();\n"
+        '        const range = request.headers.get("Range");\n'
+        '        if (range) upstreamHeaders.set("Range", range);\n'
+        "        const upstream = await fetch(upstreamUrl, {\n"
+        '          method: request.method === "HEAD" ? "HEAD" : "GET",\n'
+        "          headers: upstreamHeaders,\n"
+        '          redirect: "follow",\n'
+        "        });\n"
+        "        if (!upstream.ok && upstream.status !== 206) {\n"
+        "          return new Response(`Upstream error: ${upstream.status}`, { status: 502 });\n"
+        "        }\n"
+        "        const headers = new Headers();\n"
+        '        headers.set("Content-Type", "application/vnd.android.package-archive");\n'
+        "        for (const key of [\n"
+        '          "Content-Length",\n'
+        '          "Content-Range",\n'
+        '          "Accept-Ranges",\n'
+        '          "ETag",\n'
+        '          "Last-Modified",\n'
+        "        ]) {\n"
+        "          const val = upstream.headers.get(key);\n"
+        "          if (val) headers.set(key, val);\n"
+        "        }\n"
+        '        headers.set("Cache-Control", "public, max-age=3600");\n'
+        '        return new Response(request.method === "HEAD" ? null : upstream.body, {\n'
+        "          status: upstream.status,\n"
+        "          headers,\n"
+        "        });\n"
+        "      }\n"
+        "    }\n"
+        "    return env.ASSETS.fetch(request);\n"
+        "  },\n"
+        "};\n"
+    )
 
 
 def _resolve_metadata_ref(
@@ -329,8 +368,8 @@ def build_fdroid_repo(
         out_fdroid_repo = output_dir / "repo"
         shutil.copytree(repo_dir, out_fdroid_repo, ignore=shutil.ignore_patterns("*.apk"))
 
-        (output_dir / "_redirects").write_text(
-            _format_cloudflare_redirects(apk_redirects),
+        (output_dir / "_worker.js").write_text(
+            _render_cloudflare_worker(apk_redirects),
             encoding="utf-8",
         )
 

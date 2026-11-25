@@ -6,25 +6,24 @@ from unittest.mock import patch
 
 from fdroid_repo.fdroid import (
     _apk_repo_filename,
-    _format_cloudflare_redirects,
+    _render_cloudflare_worker,
     build_fdroid_repo,
     get_keystore_sha256_fingerprint,
     inspect_apk,
 )
 
 
-def test_format_cloudflare_redirects() -> None:
-    redirects = _format_cloudflare_redirects(
+def test_render_cloudflare_worker() -> None:
+    worker_js = _render_cloudflare_worker(
         {
             "b.apk": "https://github.com/hddq/b/releases/download/v1.0.0/b.apk",
             "a.apk": "https://github.com/hddq/a/releases/download/v2.0.0/a.apk",
         }
     )
-    assert redirects == (
-        "/repo/a.apk https://github.com/hddq/a/releases/download/v2.0.0/a.apk 302\n"
-        "/repo/b.apk https://github.com/hddq/b/releases/download/v1.0.0/b.apk 302\n"
-    )
-    assert _format_cloudflare_redirects({}) == ""
+    assert '"a.apk": "https://github.com/hddq/a/releases/download/v2.0.0/a.apk"' in worker_js
+    assert '"b.apk": "https://github.com/hddq/b/releases/download/v1.0.0/b.apk"' in worker_js
+    assert 'redirect: "follow"' in worker_js
+    assert "env.ASSETS.fetch(request)" in worker_js
 
 
 def test_build_fdroid_repo_excludes_apks_and_writes_redirects(tmp_path: Path) -> None:
@@ -114,10 +113,12 @@ def test_build_fdroid_repo_excludes_apks_and_writes_redirects(tmp_path: Path) ->
     assert (output_dir / "repo" / "index-v2.json").is_file()
     assert list((output_dir / "repo").glob("*.apk")) == []
     assert not (output_dir / ".nojekyll").exists()
-    assert (output_dir / "_redirects").read_text(encoding="utf-8") == (
-        "/repo/org.hddq.bluehop-bluehop-arm64-v0.1.0.apk "
-        "https://github.com/hddq/bluehop/releases/download/v0.1.0/bluehop-arm64.apk 302\n"
-    )
+    assert not (output_dir / "_redirects").exists()
+    worker_js = (output_dir / "_worker.js").read_text(encoding="utf-8")
+    assert (
+        '"org.hddq.bluehop-bluehop-arm64-v0.1.0.apk": '
+        '"https://github.com/hddq/bluehop/releases/download/v0.1.0/bluehop-arm64.apk"'
+    ) in worker_js
 
 
 def test_apk_repo_filename() -> None:
