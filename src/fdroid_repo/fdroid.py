@@ -52,6 +52,9 @@ def _prepare_repo_icon(icon_source: str, client: GitHubClient, dest_path: Path) 
 
     try:
         with Image.open(io.BytesIO(raw_bytes)) as img:
+            if img.mode not in ("1", "L", "LA", "P", "RGB", "RGBA"):
+                target_mode = "RGBA" if "A" in img.getbands() else "RGB"
+                img = img.convert(target_mode)
             img.save(dest_path, format="PNG")
     except Exception as exc:
         raise FDroidBuildError(

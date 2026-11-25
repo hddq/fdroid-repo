@@ -236,6 +236,44 @@ def test_prepare_repo_icon_converts_jpeg_to_png(tmp_path: Path) -> None:
         assert img.size == (32, 32)
 
 
+def test_prepare_repo_icon_converts_cmyk_jpeg_to_png(tmp_path: Path) -> None:
+    import io
+    from unittest.mock import MagicMock
+
+    from PIL import Image
+
+    cmyk_buf = io.BytesIO()
+    Image.new("CMYK", (32, 32), color=(0, 255, 255, 0)).save(cmyk_buf, format="JPEG")
+
+    client = MagicMock()
+    client.download_url_bytes.return_value = cmyk_buf.getvalue()
+
+    dest = tmp_path / "repo" / "icons" / "icon.png"
+    _prepare_repo_icon("https://example.com/avatar.jpg", client, dest)
+
+    assert dest.is_file()
+    with Image.open(dest) as img:
+        assert img.format == "PNG"
+        assert img.mode == "RGB"
+        assert img.size == (32, 32)
+
+
+def test_download_url_bytes_omits_authorization_header() -> None:
+    from unittest.mock import MagicMock
+
+    from fdroid_repo.github_client import GitHubClient
+
+    client = GitHubClient(token="secret-token")
+    fake_resp = MagicMock(status_code=200, content=b"img-bytes")
+    with patch("fdroid_repo.github_client.requests.get", return_value=fake_resp) as mock_get:
+        data = client.download_url_bytes("https://example.com/icon.png")
+
+    assert data == b"img-bytes"
+    mock_get.assert_called_once()
+    headers = mock_get.call_args.kwargs["headers"]
+    assert "Authorization" not in headers
+
+
 def test_build_fdroid_repo_fetches_repo_icon_and_renders_landing(tmp_path: Path) -> None:
     import io
     from unittest.mock import MagicMock

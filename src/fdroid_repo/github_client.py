@@ -64,7 +64,11 @@ class GitHubClient:
         return releases
 
     def download_url_bytes(self, url: str) -> bytes:
-        resp = self.session.get(url, timeout=30)
+        resp = requests.get(
+            url,
+            headers={"User-Agent": str(self.session.headers.get("User-Agent", ""))},
+            timeout=30,
+        )
         if resp.status_code >= 400:
             raise GitHubClientError(f"Failed to download {url} ({resp.status_code})")
         return resp.content
