@@ -82,7 +82,10 @@ def test_build_fdroid_repo_excludes_apks_and_writes_redirects(tmp_path: Path) ->
     )
 
     def fake_fdroid_run(cmd: list[str], cwd: Path, check: bool) -> subprocess.CompletedProcess:
-        assert cmd == ["fdroid", "update", "--create-metadata"]
+        assert cmd == ["fdroid", "update", "--create-metadata", "--use-date-from-apk"]
+        apk_path = cwd / "repo" / "org.hddq.bluehop-bluehop-arm64-v0.1.0.apk"
+        # 2026-01-01T00:00:00Z == 1767225600
+        assert int(apk_path.stat().st_mtime) == 1767225600
         (cwd / "repo" / "index-v2.json").write_text("{}", encoding="utf-8")
         return subprocess.CompletedProcess(args=cmd, returncode=0)
 

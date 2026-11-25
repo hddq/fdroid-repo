@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -117,6 +118,19 @@ def get_keystore_sha256_fingerprint(
     if not m:
         raise FDroidBuildError("Could not extract SHA256 fingerprint from keytool output")
     return m.group(1).replace(":", "").upper()
+
+
+def _parse_iso_timestamp(value: str) -> float | None:
+    raw = value.strip()
+    if not raw:
+        return None
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt.timestamp()
 
 
 def _apk_repo_filename(app_id: str, asset_name: str, tag_name: str) -> str:
@@ -274,7 +288,7 @@ def build_fdroid_repo(
 
             # 1. Download APKs and inspect them with aapt2
             release_apk_infos: dict[str, list[ApkInfo]] = {}
-            downloaded_files: list[tuple[str, Path, ApkInfo, str]] = []
+            downloaded_files: list[tuple[str, Path, ApkInfo, str, str]] = []
             detected_app_id: str | None = app.app_id
             detected_label = ""
 
@@ -294,15 +308,21 @@ def build_fdroid_repo(
                     if not detected_label and info.label:
                         detected_label = info.label
                     infos.append(info)
-                    downloaded_files.append((rel.tag_name, tmp_apk, info, asset.download_url))
+                    downloaded_files.append(
+                        (rel.tag_name, tmp_apk, info, asset.download_url, rel.published_at)
+                    )
                 release_apk_infos[rel.tag_name] = infos
 
             assert detected_app_id is not None
             app_id = detected_app_id
 
-            for tag_name, tmp_apk, _info, download_url in downloaded_files:
+            for tag_name, tmp_apk, _info, download_url, published_at in downloaded_files:
                 repo_apk_name = _apk_repo_filename(app_id, tmp_apk.name, tag_name)
-                shutil.move(str(tmp_apk), str(repo_dir / repo_apk_name))
+                dest_apk = repo_dir / repo_apk_name
+                shutil.move(str(tmp_apk), str(dest_apk))
+                published_ts = _parse_iso_timestamp(published_at)
+                if published_ts is not None:
+                    os.utime(dest_apk, (published_ts, published_ts))
                 apk_redirects[repo_apk_name] = download_url
 
             # 2. Fetch and transform Fastlane metadata
@@ -361,10 +381,10 @@ def build_fdroid_repo(
                 )
             )
 
-        # 4. Run fdroid update --create-metadata
+        # 4. Run fdroid update --create-metadata --use-date-from-apk
         try:
             subprocess.run(
-                [fdroid_bin, "update", "--create-metadata"],
+                [fdroid_bin, "update", "--create-metadata", "--use-date-from-apk"],
                 cwd=fdroid_dir,
                 check=True,
             )
